@@ -32,11 +32,9 @@ db_drop_and_create_all()
 def get_drinks():
     drinks_all = Drink.query.all()
     drinks = [drink.short() for drink in drinks_all]
-    # if len(drinks) == 0:
-    #     abort(404)
     return jsonify({
-      'success': True ,
-      'drinks' : drinks 
+        'success': True,
+        'drinks' : drinks 
     })
 
 '''
@@ -47,6 +45,15 @@ def get_drinks():
     returns status code 200 and json {"success": True, "drinks": drinks} where drinks is the list of drinks
         or appropriate status code indicating reason for failure
 '''
+@app.route('/drinks-detail', methods=['GET'])
+@requires_auth('get:drinks-detail')
+def get_drinks_details(token):
+    drinks = list(map(Drink.long, Drink.query.all()))
+    result = {
+        'success': True,
+        'drinks': drinks
+    }
+    return jsonify(result)
 
 
 '''
@@ -58,7 +65,19 @@ def get_drinks():
     returns status code 200 and json {"success": True, "drinks": drink} where drink an array containing only the newly created drink
         or appropriate status code indicating reason for failure
 '''
-
+@app.route("/drinks", methods=['POST'])
+@requires_auth("post:drinks")
+def add_drinks(token):
+    if request.data:
+        new_drink_data = json.loads(request.data.decode('utf-8'))
+        new_drink = Drink(title=new_drink_data['title'], 
+                          recipe=json.dumps(new_drink_data['recipe']))
+        Drink.insert(new_drink)
+        drinks = list(map(Drink.long, Drink.query.all()))
+        return jsonify({
+            "success": True,
+            "drinks": drinks
+        })
 
 '''
 @TODO implement endpoint
@@ -83,7 +102,19 @@ def get_drinks():
     returns status code 200 and json {"success": True, "delete": id} where id is the id of the deleted record
         or appropriate status code indicating reason for failure
 '''
-
+@app.route("/drinks", methods=['DELETE'])
+@requires_auth("delete:drinks")
+def delete_drinks(token):
+    if request.data:
+        new_drink_data = json.loads(request.data.decode('utf-8'))
+        new_drink = Drink(title=new_drink_data['title'], 
+                          recipe=json.dumps(new_drink_data['recipe']))
+        Drink.insert(new_drink)
+        drinks = list(map(Drink.long, Drink.query.all()))
+        return jsonify({
+            "success": True,
+            "drinks": drinks
+        })
 
 ## Error Handling
 '''
@@ -95,7 +126,7 @@ def unprocessable(error):
                     "success": False, 
                     "error": 422,
                     "message": "unprocessable"
-                    }), 422
+                }), 422
 
 '''
 @TODO implement error handlers using the @app.errorhandler(error) decorator
@@ -104,7 +135,7 @@ def unprocessable(error):
                     "success": False, 
                     "error": 404,
                     "message": "resource not found"
-                    }), 404
+                }), 404
 
 '''
 
