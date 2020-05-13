@@ -55,6 +55,9 @@ def get_token_auth_header():
     return true otherwise
 '''
 def check_permissions(permission, payload):
+    # print(payload)
+    # print("permissions" in payload)
+    # print(permission)
     if "permissions" in payload:
         if permission in payload['permissions']:
             return True
@@ -103,6 +106,7 @@ def verify_decode_jwt(token):
                 'n': key['n'],
                 'e': key['e']
             }
+    # print(rsa_key)
     if rsa_key:
         try:
             payload = jwt.decode(
