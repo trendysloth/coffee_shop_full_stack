@@ -48,7 +48,6 @@ def get_drinks():
 @requires_auth('get:drinks-detail')
 def get_drinks_details(token):
     drinks = list(map(Drink.long, Drink.query.all()))
-    # print(drinks)
     return jsonify({
         'success': True,
         'drinks': drinks
@@ -65,16 +64,16 @@ def get_drinks_details(token):
 '''
 @app.route("/drinks", methods=['POST'])
 @requires_auth("post:drinks")
-def add_drinks(token):
+def add_drink(token):
     if request.data:
         new_drink_data = json.loads(request.data.decode('utf-8'))
         new_drink = Drink(title=new_drink_data['title'], recipe=json.dumps(new_drink_data['recipe']))
         Drink.insert(new_drink)
-        drinks = list(map(Drink.long, Drink.query.all()))
         return jsonify({
             "success": True,
-            "drinks": drinks
+            "drink": [new_drink.id]
         })
+
 
 '''
 @TODO implement endpoint
@@ -89,20 +88,27 @@ def add_drinks(token):
 '''
 @app.route("/drinks/<drink_id>", methods=['PATCH'])
 @requires_auth("patch:drinks")
-def patch_drinks(token, drink_id):
+def patch_drink(token, drink_id):
     if request.data:
         new_drink_data = json.loads(request.data.decode('utf-8'))
-        drink_data = Drink.query.get(drink_id)
+        drink_data = Drink.query.filter_by(id=drink_id).one_or_none()
+        if drink_data is None:
+            abort(404)
+        if not ('title' in new_drink_data):
+            abort(400)
         if 'title' in new_drink_data:
             setattr(drink_data, 'title', new_drink_data['title'])
         if 'recipe' in new_drink_data:
             setattr(drink_data, 'recipe', new_drink_data['recipe'])
-        Drink.update(drink_data)
-        drinks = list(map(Drink.long, Drink.query.all()))
+        drink_data.update()
+        updated_drink = Drink.query.filter_by(id=drink_id).first()
         return jsonify({
-            "success": True,
-            "drinks": drinks
+            'success': True,
+            'drinks': [updated_drink.long()]
         })
+    else:
+        abort(422)
+
 
 '''
 @TODO implement endpoint
@@ -116,19 +122,32 @@ def patch_drinks(token, drink_id):
 '''
 @app.route("/drinks/<drink_id>", methods=['DELETE'])
 @requires_auth("delete:drinks")
-def delete_drinks(token, drink_id):
-    drink_data = Drink.query.get(drink_id)
-    Drink.delete(drink_data)
-    drinks = list(map(Drink.long, Drink.query.all()))
-    return jsonify({
-        "success": True,
-        "drinks": drinks
-    })
+def delete_drink(token, drink_id):
+    try:
+        drink = Drink.query.filter_by(id=drink_id).one_or_none()
+        if drink is None:
+            abort(404)
+        drink.delete()
+        return jsonify({
+            'success': True,
+            'drink': [drink.id]
+        })
+    except:
+        abort(422)
 
 ## Error Handling
 '''
 Example error handling for unprocessable entity
 '''
+@app.errorhandler(400)
+def badrequest(error):
+    return jsonify({
+        "success": False,
+        "error": 400,
+        "message": "bad request"
+    }), 400
+
+
 @app.errorhandler(422)
 def unprocessable(error):
     return jsonify({
@@ -137,17 +156,17 @@ def unprocessable(error):
         "message": "unprocessable"
     }), 422
 
+
 '''
 @TODO implement error handlers using the @app.errorhandler(error) decorator
     each error handler should return (with approprate messages):
-             jsonify({
-                    "success": False, 
-                    "error": 404,
-                    "message": "resource not found"
-                }), 404
+    jsonify({
+        "success": False, 
+        "error": 404,
+        "message": "resource not found"
+    }), 404
 
 '''
-
 '''
 @TODO implement error handler for 404
     error handler should conform to general task above 
@@ -161,6 +180,7 @@ def notfound(error):
     }), 404
 
 '''
+
 @TODO implement error handler for AuthError
     error handler should conform to general task above 
 '''

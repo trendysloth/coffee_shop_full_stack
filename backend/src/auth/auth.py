@@ -29,19 +29,25 @@ class AuthError(Exception):
     return the token part of the header
 '''
 def get_token_auth_header():
-    if "Authorization" in request.headers:
+    if ("Authorization" in request.headers and request.headers["Authorization"]):
         auth_header = request.headers["Authorization"]
-        if auth_header:
-            bearer_token_array = auth_header.split(' ')
-            if (bearer_token_array[0] and 
-                bearer_token_array[0].lower() == "bearer" and 
-                bearer_token_array[1]):
-                return bearer_token_array[1]
-    raise AuthError({
-        'success': False,
-        'message': 'JWT not found',
-        'error': 401
-    }, 401)
+        bearer_token_array = auth_header.split(' ')
+        if (bearer_token_array[0] and 
+            bearer_token_array[0].lower() == "bearer" and 
+            bearer_token_array[1]):
+            return bearer_token_array[1]
+        else:
+            raise AuthError({
+                'code': 'invalid_header',
+                'description': 'invalid_header'
+            }, 401)
+
+    else:
+        raise AuthError({
+            'success': False,
+            'message': 'JWT not found',
+            'error': 401
+        }, 401)
 
 '''
 @TODO implement check_permissions(permission, payload) method
@@ -55,17 +61,14 @@ def get_token_auth_header():
     return true otherwise
 '''
 def check_permissions(permission, payload):
-    # print(payload)
-    # print("permissions" in payload)
-    # print(permission)
-    if "permissions" in payload:
-        if permission in payload['permissions']:
-            return True
-    raise AuthError({
-        'success': False,
-        'message': 'Permission not found in JWT',
-        'error': 401
-    }, 401)
+    if ("permissions" in payload and permission in payload['permissions']):
+        return True
+    else:
+        raise AuthError({
+            'success': False,
+            'message': 'Permission not found in JWT',
+            'error': 401
+        }, 401)
 
 
 '''
@@ -106,7 +109,7 @@ def verify_decode_jwt(token):
                 'n': key['n'],
                 'e': key['e']
             }
-    # print(rsa_key)
+
     if rsa_key:
         try:
             payload = jwt.decode(
